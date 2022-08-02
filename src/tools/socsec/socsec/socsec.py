@@ -154,7 +154,7 @@ def hexdump(data):
             chunks(binascii.hexlify(d).decode('ascii').upper(), 2))
         line += dumpstr[:8*3]
         if len(d) > 8:  # insert separator if needed
-            line += ' ' + dumpstr[8*3:]
+            line += f' {dumpstr[8*3:]}'
         # ................
         # calculate indentation, which may be different for the last line
         pad = 2
@@ -166,10 +166,7 @@ def hexdump(data):
 
         for byte in d:
             # printable ASCII range 0x20 to 0x7E
-            if 0x20 <= byte <= 0x7E:
-                line += chr(byte)
-            else:
-                line += '.'
+            line += chr(byte) if 0x20 <= byte <= 0x7E else '.'
         print(line)
 
 
@@ -192,8 +189,6 @@ def rsa_signature(alg_data, rsa_key_file, src_bin,
         read_f = signing_file.read()
 
         signature = bytearray(read_f)
-        if order == 'little':
-            signature.reverse()
     else:
         if signing_helper is not None:
             p = subprocess.Popen(
@@ -210,12 +205,11 @@ def rsa_signature(alg_data, rsa_key_file, src_bin,
         (pout, perr) = p.communicate(input=src_bin)
         retcode = p.wait()
         if retcode != 0:
-            raise ValueError('Error signing: {}'.format(perr))
+            raise ValueError(f'Error signing: {perr}')
 
         signature = bytearray(pout)
-        if order == 'little':
-            signature.reverse()
-
+    if order == 'little':
+        signature.reverse()
     if len(signature) < 512:
         signature = signature + bytearray(512 - len(signature))
 
@@ -234,9 +228,9 @@ def rsa_verify(alg_data, rsa_key_file, signature, digest, order='little'):
     rsa_key = rsa_importkey(rsa_key_file)
     try:
         if rsa_key.d:
-            cmd = "openssl rsautl -verify -raw -inkey " + rsa_key_file
-    except (AttributeError):
-        cmd = "openssl rsautl -verify -raw --pubin -inkey " + rsa_key_file
+            cmd = f"openssl rsautl -verify -raw -inkey {rsa_key_file}"
+    except AttributeError:
+        cmd = f"openssl rsautl -verify -raw --pubin -inkey {rsa_key_file}"
 
     p = subprocess.Popen(
         cmd,
@@ -257,10 +251,7 @@ def rsa_verify(alg_data, rsa_key_file, signature, digest, order='little'):
     else:
         sign_dec = sign_dec[len(sign_dec) - len(digest):]
 
-    if sign_dec == digest:
-        return True
-    else:
-        return False
+    return sign_dec == digest
 
 
 def rsa_encrypt(rsa_key_file, src_bin, order='little', randfunc=None):
@@ -273,11 +264,9 @@ def rsa_encrypt(rsa_key_file, src_bin, order='little', randfunc=None):
     if rsa_key.has_private():
         t = RSA.construct((rsa_key.n, rsa_key.d, rsa_key.e))
         cipher = Cipher_pkcs1_v1_5.new(t, randfunc)
-        src_enc = cipher.encrypt(src_bin)
     else:
         cipher = Cipher_pkcs1_v1_5.new(rsa_key, randfunc)
-        src_enc = cipher.encrypt(src_bin)
-
+    src_enc = cipher.encrypt(src_bin)
     src_enc = bytearray(src_enc)
     if order == 'little':
         src_enc.reverse()
@@ -304,34 +293,28 @@ class Sec(object):
         algorithm_type = -1
         rsa_len = 0
         sha_len = 0
-        match_alg = re.match(
+        if match_alg := re.match(
             r'AES_RSA(1024|2048|3072|4096)_SHA(224|256|384|512)',
-            algorithm_name, re.M)
-
-        if match_alg:
+            algorithm_name,
+            re.M,
+        ):
             algorithm_type = AES_RSA_SHA
-            rsa_len = match_alg.group(1)
-            sha_len = match_alg.group(2)
+            rsa_len = match_alg[1]
+            sha_len = match_alg[2]
 
-        match_alg = re.match(
-            r'RSA(1024|2048|3072|4096)_SHA(224|256|384|512)',
-            algorithm_name, re.M)
-
-        if match_alg:
+        if match_alg := re.match(
+            r'RSA(1024|2048|3072|4096)_SHA(224|256|384|512)', algorithm_name, re.M
+        ):
             algorithm_type = RSA_SHA
-            rsa_len = match_alg.group(1)
-            sha_len = match_alg.group(2)
+            rsa_len = match_alg[1]
+            sha_len = match_alg[2]
 
         if algorithm_name == 'AES_GCM':
             algorithm_type = AES_GCM
 
-        match_alg = re.match(
-            r'SHA(224|256|384|512)',
-            algorithm_name, re.M)
-
-        if match_alg:
+        if match_alg := re.match(r'SHA(224|256|384|512)', algorithm_name, re.M):
             algorithm_type = HASH_BINDING
-            sha_len = match_alg.group(1)
+            sha_len = match_alg[1]
 
         if algorithm_type == -1:
             raise SecError('Algorithm is invalid')
@@ -373,7 +356,7 @@ class Sec(object):
 
     def verify_bl1_mode_2_image(self, sec_image, verify_key_path, alg_data,
                                 sign_image_size, signature_offset, rsa_key_order):
-        sha = alg_data.hash_alg.new(sec_image[0:sign_image_size])
+        sha = alg_data.hash_alg.new(sec_image[:sign_image_size])
         digest = sha.digest()
         image_signature = sec_image[signature_offset:
                                     (signature_offset+alg_data.signature_num_bytes)]
@@ -408,7 +391,7 @@ class Sec(object):
 
         aes_iv = sec_image[aes_data_offset:aes_data_offset+12]
         try:
-            aes = AES.new(aes_key, AES.MODE_GCM, nonce=aes_iv[0:12])
+            aes = AES.new(aes_key, AES.MODE_GCM, nonce=aes_iv[:12])
             aes.update(sec_image[:enc_offset])
             plaintext = aes.decrypt_and_verify(
                 sec_image[enc_offset:sign_image_size], rev_signature)
@@ -456,7 +439,7 @@ class Sec(object):
 
     def verify_sv_chain_image(self, image_list, first_layer_vk_path,
                               alg_data, rsa_key_order):
-        for i in range(0, len(image_list)):
+        for i in range(len(image_list)):
             print('BL{:d} verifying'.format(i + 2))
             part_image = image_list[i]
             header = part_image[:self.COT_HEADER_SIZE]
@@ -466,7 +449,7 @@ class Sec(object):
 
             mw = self.MAGIC_WORD_VB.encode()
 
-            if magic_word[0:len(mw)] == mw:
+            if magic_word[: len(mw)] == mw:
                 print("check header magic word PASS")
             else:
                 raise SecError("header magic word verify failed")
@@ -506,7 +489,7 @@ class Sec(object):
                               signing_helper, signing_helper_with_files):
 
         # sign the image
-        sha = alg_data.hash_alg.new(image[0:sign_image_size])
+        sha = alg_data.hash_alg.new(image[:sign_image_size])
         digest = sha.digest()
         signature = rsa_signature(
             alg_data, sign_key_path, digest,
@@ -535,10 +518,7 @@ class Sec(object):
         if key_in_otp:
             insert_bytearray(aes_iv, image, aes_data_offset)
         else:
-            if rsa_key_order == 'little':
-                aes_object = bytearray(48)
-            else:
-                aes_object = bytearray(64)
+            aes_object = bytearray(48) if rsa_key_order == 'little' else bytearray(64)
             insert_bytearray(aes_key, aes_object, 0)
             insert_bytearray(aes_iv, aes_object, 0x20)
             enc_aes_object = rsa_encrypt(
@@ -547,7 +527,7 @@ class Sec(object):
             insert_bytearray(enc_aes_object, image, aes_data_offset)
 
         # sign the image
-        sha = alg_data.hash_alg.new(image[0:sign_image_size])
+        sha = alg_data.hash_alg.new(image[:sign_image_size])
         digest = sha.digest()
         signature = rsa_signature(
             alg_data, sign_key_path, digest,
@@ -560,7 +540,7 @@ class Sec(object):
                                 aes_data_offset,
                                 signing_helper, signing_helper_with_files):
 
-        aes = AES.new(gcm_aes_key, AES.MODE_GCM, nonce=gcm_aes_iv[0:12])
+        aes = AES.new(gcm_aes_key, AES.MODE_GCM, nonce=gcm_aes_iv[:12])
         aes.update(image[:enc_offset])
         ciphertext, signature = aes.encrypt_and_digest(
             image[enc_offset:sign_image_size])
@@ -607,11 +587,7 @@ class Sec(object):
         return info
 
     def parse_cot_info(self, info):
-        if info & 1:
-            algorithm_type = RSA_SHA
-        else:
-            algorithm_type = HASH_BINDING
-
+        algorithm_type = RSA_SHA if info & 1 else HASH_BINDING
         rsa_info = (info >> 3) & 3
 
         if rsa_info == 0:
@@ -714,9 +690,9 @@ class Sec(object):
         bl1_image = bytearray(bl1_image_fd.read())
         bl1_image_len = len(bl1_image)
         if soc_version in ['2600', '2605']:
-            if header_offset == None:
+            if header_offset is None:
                 header_offset = 0x20
-            if enc_offset == None:
+            if enc_offset is None:
                 enc_offset = 0x50
             if ((stack_intersects_verification_region is None) or
                 (stack_intersects_verification_region == 'true')):
@@ -725,14 +701,14 @@ class Sec(object):
                 bl1_max_len = 64 * 1024 - 512
             if bl1_image_len > bl1_max_len:
                 raise SecError(f"The maximum size of BL1 image is {bl1_max_len} bytes.")
-            if soc_version == '2605' and flash_patch_offset == None:
+            if soc_version == '2605' and flash_patch_offset is None:
                 flash_patch_offset = 0x50
             else:
                 flash_patch_offset = 0
         elif soc_version == '1030':
-            if header_offset == None:
+            if header_offset is None:
                 header_offset = 0x400
-            if enc_offset == None:
+            if enc_offset is None:
                 enc_offset = 0x430
             if bl1_image_len > (768 * 1024):
                 raise SecError("The maximum size of BL1 image is 768 KBytes.")
@@ -924,7 +900,7 @@ class Sec(object):
         insert_bytearray(header, image, 0)
 
         image.extend(bytearray(sign_image_size - image_len))
-        sha = alg_data.hash_alg.new(image[0:sign_image_size])
+        sha = alg_data.hash_alg.new(image[:sign_image_size])
         digest = sha.digest()
 
         signature = rsa_signature(
@@ -943,16 +919,14 @@ class Sec(object):
 
         descriptors = []
         part_count = len(cot_part)
-        for i in range(0, part_count):
+        for i in range(part_count):
             part_list = cot_part[i].split(':')
             if len(part_list) != 4:
-                raise SecError(
-                    'Malformed chained partition "{}".'.format(cot_part[i]))
+                raise SecError(f'Malformed chained partition "{cot_part[i]}".')
             if i < part_count - 1:
                 npart_list = cot_part[i + 1].split(':')
                 if len(npart_list) != 4:
-                    raise SecError(
-                        'Malformed chained partition "{}".'.format(cot_part[i + 1]))
+                    raise SecError(f'Malformed chained partition "{cot_part[i + 1]}".')
                 next_part_verify_key_path = npart_list[2]
             else:
                 next_part_verify_key_path = None

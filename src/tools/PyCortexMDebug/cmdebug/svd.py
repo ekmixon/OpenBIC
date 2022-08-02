@@ -32,8 +32,8 @@ class SVDNonFatalError(Exception):
 		self.exc_info = sys.exc_info()
 
 	def __str__(self):
-		s = "Non-fatal: {}".format(self.m)
-		s += "\n" + str("".join(traceback.format_exc())).strip()
+		s = f"Non-fatal: {self.m}"
+		s += "\n" + "".join(traceback.format_exc()).strip()
 		return s
 
 class SVDFile:
@@ -55,7 +55,7 @@ def add_register(parent, node):
 		# dimension is not used, number of split indexes should be same
 		incr = int(str(node.dimIncrement), 0)
 		default_dim_index = ",".join((str(i) for i in range(dim)))
-		dim_index = str(getattr(node, "dimIndex", default_dim_index))
+		dim_index = getattr(node, "dimIndex", default_dim_index)
 		indexes = dim_index.split(',')
 		offset = 0
 		for i in indexes:
@@ -77,7 +77,7 @@ def add_cluster(parent, node):
 		# dimension is not used, number of split indexes should be same
 		incr = int(str(node.dimIncrement), 0)
 		default_dim_index = ",".join((str(i) for i in range(dim)))
-		dim_index = str(getattr(node, "dimIndex", default_dim_index))
+		dim_index = getattr(node, "dimIndex", default_dim_index)
 		indexes = dim_index.split(',')
 		offset = 0
 		for i in indexes:
@@ -217,7 +217,7 @@ class SVDPeripheralRegisterField:
 	def __init__(self, svd_elem, parent):
 		self.parent = parent
 		self.name = str(svd_elem.name)
-		self.description = str(getattr(svd_elem, "description", ""))
+		self.description = getattr(svd_elem, "description", "")
 
 		try:
 			self.offset = int(str(svd_elem.bitOffset))
@@ -257,10 +257,10 @@ class SVDPeripheralRegisterField:
 
 if __name__ == '__main__':
 	for f in sys.argv[1:]:
-		print("Testing file: {}".format(f))
+		print(f"Testing file: {f}")
 		svd = SVDFile(f)
 		print(svd.peripherals)
 		key = list(svd.peripherals)[0]
-		print("Registers in peripheral '{}':".format(key))
+		print(f"Registers in peripheral '{key}':")
 		print(svd.peripherals[key].registers)
-		print("Done testing file: {}".format(f))
+		print(f"Done testing file: {f}")

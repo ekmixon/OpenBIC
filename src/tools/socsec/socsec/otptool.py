@@ -51,13 +51,10 @@ class OtpError(Exception):
 class ECC (object):
     def byte2bits(self, data_bytearray: bytearray) -> array:
         bits = ''
-        bits_array = []
         for data_byte in data_bytearray:
             data_bits = bin(data_byte)[2:].zfill(8)[::-1]
             bits += data_bits
-        for binary in bits:
-            bits_array.append(int(binary, 2))
-        return bits_array
+        return [int(binary, 2) for binary in bits]
 
     def xor_array(self, bits_array: array, x: int, y: int) -> int:
         out = 0
@@ -72,48 +69,41 @@ class ECC (object):
         return out
 
     def bitsarray_to_bytes(self, s: array) -> int:
-        r = 0
-        offset = 0
-        for bits in s:
-            r += bits << offset
-            offset += 1
-        return r
+        return sum(bits << offset for offset, bits in enumerate(s))
 
     def do_ecc(self, data: bytearray) -> bytearray:
         result = bytearray(1024)
-        offset = 0
-        for cursor in range(0, len(data), 8):
+        for offset, cursor in enumerate(range(0, len(data), 8)):
             eight_bytes = data[cursor:cursor+8]
             bits = self.byte2bits(eight_bytes)
             tmp = [0, 0, 0, 0, 0, 0, 0, 0]
             tmp[0] = bits[0] ^ bits[1] ^ bits[3] ^ bits[4] ^ bits[6] ^ \
-                bits[8] ^ bits[10] ^ bits[11] ^ bits[13] ^ bits[15] ^ \
-                bits[17] ^ bits[19] ^ bits[21] ^ bits[23] ^ bits[25] ^ \
-                bits[26] ^ bits[28] ^ bits[30] ^ bits[32] ^ bits[34] ^ \
-                bits[36] ^ bits[38] ^ bits[40] ^ bits[42] ^ bits[44] ^ \
-                bits[46] ^ bits[48] ^ bits[50] ^ bits[52] ^ bits[54] ^ \
-                bits[56] ^ bits[57] ^ bits[59] ^ bits[61] ^ bits[63]
+                    bits[8] ^ bits[10] ^ bits[11] ^ bits[13] ^ bits[15] ^ \
+                    bits[17] ^ bits[19] ^ bits[21] ^ bits[23] ^ bits[25] ^ \
+                    bits[26] ^ bits[28] ^ bits[30] ^ bits[32] ^ bits[34] ^ \
+                    bits[36] ^ bits[38] ^ bits[40] ^ bits[42] ^ bits[44] ^ \
+                    bits[46] ^ bits[48] ^ bits[50] ^ bits[52] ^ bits[54] ^ \
+                    bits[56] ^ bits[57] ^ bits[59] ^ bits[61] ^ bits[63]
             tmp[1] = bits[0] ^ bits[2] ^ bits[3] ^ bits[5] ^ bits[6] ^ \
-                bits[9] ^ bits[10] ^ bits[12] ^ bits[13] ^ bits[16] ^ \
-                bits[17] ^ bits[20] ^ bits[21] ^ bits[24] ^ bits[25] ^ \
-                bits[27] ^ bits[28] ^ bits[31] ^ bits[32] ^ bits[35] ^ \
-                bits[36] ^ bits[39] ^ bits[40] ^ bits[43] ^ bits[44] ^ \
-                bits[47] ^ bits[48] ^ bits[51] ^ bits[52] ^ bits[55] ^ \
-                bits[56] ^ bits[58] ^ bits[59] ^ bits[62] ^ bits[63]
+                    bits[9] ^ bits[10] ^ bits[12] ^ bits[13] ^ bits[16] ^ \
+                    bits[17] ^ bits[20] ^ bits[21] ^ bits[24] ^ bits[25] ^ \
+                    bits[27] ^ bits[28] ^ bits[31] ^ bits[32] ^ bits[35] ^ \
+                    bits[36] ^ bits[39] ^ bits[40] ^ bits[43] ^ bits[44] ^ \
+                    bits[47] ^ bits[48] ^ bits[51] ^ bits[52] ^ bits[55] ^ \
+                    bits[56] ^ bits[58] ^ bits[59] ^ bits[62] ^ bits[63]
             tmp[2] = self.xor_array(bits, 3, 1) ^ self.xor_array(bits, 10, 7) ^ \
-                self.xor_array(bits, 17, 14) ^ self.xor_array(bits, 25, 22) ^ \
-                self.xor_array(bits, 32, 29) ^ self.xor_array(bits, 40, 37) ^ \
-                self.xor_array(bits, 48, 45) ^ self.xor_array(bits, 56, 53) ^ \
-                self.xor_array(bits, 63, 60)
+                    self.xor_array(bits, 17, 14) ^ self.xor_array(bits, 25, 22) ^ \
+                    self.xor_array(bits, 32, 29) ^ self.xor_array(bits, 40, 37) ^ \
+                    self.xor_array(bits, 48, 45) ^ self.xor_array(bits, 56, 53) ^ \
+                    self.xor_array(bits, 63, 60)
             tmp[3] = self.xor_array(bits, 10, 4) ^ self.xor_array(bits, 25, 18) ^ \
-                self.xor_array(bits, 40, 33) ^ self.xor_array(bits, 56, 49)
+                    self.xor_array(bits, 40, 33) ^ self.xor_array(bits, 56, 49)
             tmp[4] = self.xor_array(
                 bits, 25, 11) ^ self.xor_array(bits, 56, 41)
             tmp[5] = self.xor_array(bits, 56, 26)
             tmp[6] = self.xor_array(bits, 63, 57)
             tmp[7] = self.xor_array(bits, 63, 0)
             result[offset] = self.bitsarray_to_bytes(tmp)
-            offset += 1
         return result
 
 
@@ -617,10 +607,7 @@ class OTP(object):
         if types == 'bin':
             return bytearray(file_bin)
 
-        if types == 'dw_hex':
-            return dw_hex_to_bin(file_bin)
-
-        return None
+        return dw_hex_to_bin(file_bin) if types == 'dw_hex' else None
 
     def genDataMask(self, data_region_ignore, src, offset, ecc_region_enable, data_region_size, ecc_region_offset):
         if ecc_region_enable:
@@ -630,9 +617,8 @@ class OTP(object):
             end = int((offset + len(src) - 1) / 8)
             for i in range(start, end + 1):
                 data_region_ignore[ecc_region_offset+i] = 0
-        else:
-            if (offset + len(src) >= data_region_size):
-                raise OtpError("Data region is out off range")
+        elif (offset + len(src) >= data_region_size):
+            raise OtpError("Data region is out off range")
 
         start = offset
         end = offset + len(src)
@@ -654,9 +640,7 @@ class OTP(object):
     def genKeyRegion(self, key_config, key_folder, data_region, data_region_ignore,
                      genKeyHeader, key_to_bytearray, ecc_region_enable, data_region_size, ecc_region_offset):
 
-        key_header = []
-        for conf in key_config:
-            key_header.append(genKeyHeader(conf, key_folder))
+        key_header = [genKeyHeader(conf, key_folder) for conf in key_config]
         key_header[-1] |= 1 << 13
         header_byteArray = bytearray(array.array('I', key_header).tobytes())
         insert_bytearray(header_byteArray, data_region, 0)
@@ -672,19 +656,12 @@ class OTP(object):
                              offset, ecc_region_enable, data_region_size, ecc_region_offset)
 
     def make_data_region(self, data_config, key_folder, user_data_folder, genKeyHeader, key_to_bytearray, data_region_size, ecc_region_offset):
-        patch_reserved_offset = 0x1B80
-        patch_reserved_lne = 0x80
-
         data_region = bytearray(data_region_size)
         data_region_ignore = bytearray(data_region_size)
-        for i in range(0, data_region_size):
+        for i in range(data_region_size):
             data_region_ignore[i] = 0xff
 
-        if data_config['ecc_region']:
-            ecc_region_enable = True
-        else:
-            ecc_region_enable = False
-
+        ecc_region_enable = bool(data_config['ecc_region'])
         if 'key' in data_config:
             self.genKeyRegion(data_config['key'], key_folder,
                               data_region, data_region_ignore,
@@ -693,6 +670,9 @@ class OTP(object):
             self.genUserRegion(
                 data_config['user_data'], user_data_folder, data_region, data_region_ignore, ecc_region_enable, data_region_size, ecc_region_offset)
         if 'patch' not in data_config:
+            patch_reserved_offset = 0x1B80
+            patch_reserved_lne = 0x80
+
             for i in data_region_ignore[patch_reserved_offset:patch_reserved_offset+patch_reserved_lne]:
                 if i != 0xff:
                     raise OtpError('region {0:#08x} to {1:#08x} is reserved for patch'.format(
@@ -721,15 +701,11 @@ class OTP(object):
                     config_region_ignore[offset] = 0
 
         for config in config_region_config:
-            info = None
             key = config
             value = config_region_config[config]
-            for i in config_info:
-                if key == i['key']:
-                    info = i
-                    break
+            info = next((i for i in config_info if key == i['key']), None)
             if not info:
-                raise OtpError('"{}" config is not supported'.format(key))
+                raise OtpError(f'"{key}" config is not supported')
 
             if info['type'] == 'boolean':
                 dw_offset = info['dw_offset']
@@ -762,8 +738,7 @@ class OTP(object):
                 offset = dw_offset*32+bit_offset
 
                 if hex_value > 2 ** bit_length:
-                    raise OtpError(
-                        '"{}": config value out of range'.format(key))
+                    raise OtpError(f'"{key}": config value out of range')
                 bit_value = bitarray(bin(hex_value)[2:][::-1])
                 tmp = bitarray(bit_length)
                 tmp.setall(False)
@@ -780,16 +755,16 @@ class OTP(object):
                 offset_value = value - value_start
 
                 if offset_value < 0 or offset_value > bit_length:
-                    raise OtpError('"{}": value is out of range'.format(key))
+                    raise OtpError(f'"{key}": value is out of range')
 
                 config_region_ignore[offset+offset_value] = 0
                 config_region[offset+offset_value] = 1
 
             else:
-                raise OtpError('"{}": value is invalid'.format(key))
+                raise OtpError(f'"{key}": value is invalid')
 
         return bytearray(config_region.tobytes()), \
-            bytearray(config_region_ignore.tobytes())
+                bytearray(config_region_ignore.tobytes())
 
     def make_otp_strap(self, otp_strap_config, strap_info, otp_strap_bit_size):
         otp_strap = bitarray(otp_strap_bit_size, endian='little')

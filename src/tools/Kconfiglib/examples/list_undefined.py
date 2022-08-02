@@ -85,7 +85,7 @@ def all_arch_srcarch_kconfigs():
     os.environ["LD"] = "ld"
 
     for arch, srcarch in all_arch_srcarch_pairs():
-        print("  Processing " + arch)
+        print(f"  Processing {arch}")
 
         os.environ["ARCH"] = arch
         os.environ["SRCARCH"] = srcarch
@@ -128,10 +128,7 @@ def referencing_nodes(kconf, name):
     res = []
 
     for node in kconf.node_iter():
-        for ref in node.referenced:
-            if ref.name == name:
-                res.append(node)
-
+        res.extend(node for ref in node.referenced if ref.name == name)
     return res
 
 
@@ -145,7 +142,7 @@ for kconf in all_arch_srcarch_kconfigs():
         # things up by tweaking referencing_nodes() to compare each symbol to
         # multiple symbols while walking the configuration tree.
         for node in referencing_nodes(kconf, name):
-            refs.add("{}:{}".format(node.filename, node.linenr))
+            refs.add(f"{node.filename}:{node.linenr}")
 
 
 print("\nThe following globally undefined symbols were found, listed here\n"
@@ -153,4 +150,4 @@ print("\nThe following globally undefined symbols were found, listed here\n"
       "References might come from enclosing menus and ifs.\n")
 
 for name, refs in undef_sym_refs:
-    print("  {}: {}".format(name, ", ".join(refs)))
+    print(f'  {name}: {", ".join(refs)}')

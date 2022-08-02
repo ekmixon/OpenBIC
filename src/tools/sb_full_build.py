@@ -163,16 +163,16 @@ if __name__ == "__main__":
     print('make done')
     run_shell('cp .config .config_backup')
 
-    with open('{}/.config'.format(root_dir), 'r+') as conf:
+    with open(f'{root_dir}/.config', 'r+') as conf:
         defconfig_list = conf.readlines()
 
     for mode2 in MODE_2_LIST:
         defconfig_case = defconfig_list.copy()
-        otp_conf = '\"configs/otp_config/{}\"'.format(mode2['otp'])
-        dest_folder = './sb_bin/{}'.format(mode2['name'])
+        otp_conf = f"""\"configs/otp_config/{mode2['otp']}\""""
+        dest_folder = f"./sb_bin/{mode2['name']}"
 
-        run_shell('mkdir -p ./sb_bin/{}'.format(mode2['name']))
-        run_shell('cp {} {}'.format(otp_conf, dest_folder))
+        run_shell(f"mkdir -p ./sb_bin/{mode2['name']}")
+        run_shell(f'cp {otp_conf} {dest_folder}')
         defconfig_case.append(MAIN_CONFIG)
         defconfig_case.append(OTP_CONFIG.format(mode2['otp']))
         defconfig_case.append(MODE_2)
@@ -190,20 +190,18 @@ if __name__ == "__main__":
         print('start ...')
         for kid in SB_RSA_KEY:
 
-            sec_res = 'sec_ast1030_bic{}.bin'.format(i)
-            uart_res = 'sec_uart_ast1030_bic{}.bin'.format(i)
+            sec_res = f'sec_ast1030_bic{i}.bin'
+            uart_res = f'sec_uart_ast1030_bic{i}.bin'
             i = i + 1
             d = defconfig_case.copy()
             d.append(kid.format(mode2['rsa']))
-            with open('{}/.config'.format(root_dir), 'w') as conf:
+            with open(f'{root_dir}/.config', 'w') as conf:
                 conf.writelines(d)
             if run_shell('make secure_boot') != 0:
                 raise TypeError
-            run_shell(
-                'cp ./bin/sec_ast1030_bic.bin {}/{}'.format(dest_folder, sec_res))
-            run_shell(
-                'cp ./bin/uart_sec_ast1030_bic.bin {}/{}'.format(dest_folder, uart_res))
-            run_shell('cp .config {}/'.format(dest_folder))
-            run_shell('cp ./bin/otp/otp-all.image {}/'.format(dest_folder))
+            run_shell(f'cp ./bin/sec_ast1030_bic.bin {dest_folder}/{sec_res}')
+            run_shell(f'cp ./bin/uart_sec_ast1030_bic.bin {dest_folder}/{uart_res}')
+            run_shell(f'cp .config {dest_folder}/')
+            run_shell(f'cp ./bin/otp/otp-all.image {dest_folder}/')
 
     run_shell('mv .config_backup .config')

@@ -27,7 +27,7 @@ from Crypto.PublicKey import RSA
 
 def parse_path(path):
     if path is None or path == '':
-        return os.path.abspath(os.path.curdir)+'/'
+        return f'{os.path.abspath(os.path.curdir)}/'
     if path[-1] != '/':
         path += '/'
     return path
@@ -81,9 +81,9 @@ def rsa_key_to_bin(rsa_key_file, types, order='little'):
     e = bitarray(bin(rsa_key.e)[2:])
     n_remain = (8-(n.length() % 8)) % 8
     e_remain = (8-(e.length() % 8)) % 8
-    for _ in range(0, n_remain):
+    for _ in range(n_remain):
         n.insert(0, 0)
-    for _ in range(0, e_remain):
+    for _ in range(e_remain):
         e.insert(0, 0)
 
     n = n.tobytes()
@@ -99,7 +99,7 @@ def rsa_key_to_bin(rsa_key_file, types, order='little'):
     elif types == 'private':
         d = bitarray(bin(rsa_key.d)[2:])
         d_remain = (8-(d.length() % 8)) % 8
-        for _ in range(0, d_remain):
+        for _ in range(d_remain):
             d.insert(0, 0)
         d = d.tobytes()
         d_b = bytearray(d)

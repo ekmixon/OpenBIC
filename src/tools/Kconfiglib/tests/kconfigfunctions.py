@@ -7,11 +7,11 @@ def one(kconf, name, s):
 
 
 def one_or_more(kconf, name, arg, *args):
-    return arg + " + " + ",".join(args)
+    return f"{arg} + " + ",".join(args)
 
 
 def location(kconf, name):
-    return "{}:{}".format(kconf.filename, kconf.linenr)
+    return f"{kconf.filename}:{kconf.linenr}"
 
 
 functions = {

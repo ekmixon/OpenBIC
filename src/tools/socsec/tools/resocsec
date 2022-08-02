@@ -26,13 +26,18 @@ import argparse
 from socsec import socsec
 
 socs = ['2600', '1030']
-mode2_algos = list(f'RSA{rsa}-SHA{sha}'
-                   for rsa in (1024, 2048, 3072, 4096)
-                   for sha in (224, 256, 384, 512))
+mode2_algos = [
+    f'RSA{rsa}-SHA{sha}'
+    for rsa in (1024, 2048, 3072, 4096)
+    for sha in (224, 256, 384, 512)
+]
 
-mode2aes_algos = list(f'AES-RSA{rsa}-SHA{sha}'
-                      for rsa in (1024, 2048, 3072, 4096)
-                      for sha in (224, 256, 384, 512))
+
+mode2aes_algos = [
+    f'AES-RSA{rsa}-SHA{sha}'
+    for rsa in (1024, 2048, 3072, 4096)
+    for sha in (224, 256, 384, 512)
+]
 
 
 def frob_algorithm(algo):
@@ -40,7 +45,6 @@ def frob_algorithm(algo):
 
 
 def secure_chained_images(args):
-    pass
     sec = socsec.Sec()
     cot_part = [':'.join(image) for image in args.images]
     sec.make_sv_chain_image(frob_algorithm(args.algorithm),

@@ -67,7 +67,7 @@ def fail(msg=None):
     global all_passed
     all_passed = False
     if msg is not None:
-        print("fail: " + msg)
+        print(f"fail: {msg}")
 
 
 def verify(cond, msg):
@@ -77,7 +77,7 @@ def verify(cond, msg):
 
 def verify_equal(x, y):
     if x != y:
-        fail("'{}' does not equal '{}'".format(x, y))
+        fail(f"'{x}' does not equal '{y}'")
 
 
 # Prevent accidental loading of configuration files by removing
@@ -102,7 +102,7 @@ def run_tests():
             log = True
             print("Log mode enabled")
         else:
-            print("Unrecognized option '{}'".format(s))
+            print(f"Unrecognized option '{s}'")
             return
 
     run_selftests()

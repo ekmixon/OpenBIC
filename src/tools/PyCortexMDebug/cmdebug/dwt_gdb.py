@@ -53,14 +53,14 @@ class DWT(gdb.Command):
 			self.write(0xE000EDFC, self.read(0xE000EDFC) | (1 << 24))
 			self.write(DWT_CTRL, 0)
 			self.is_init = True
-			
+
 		s = map(lambda x : x.lower(), str(args).split(" "))
 		# Check for empty command
 		if s[0] in ['', 'help']:
 			self.print_help()
 			return()
-			
-		if(s[0] == "cyccnt"):
+
+		if (s[0] == "cyccnt"):
 			if(len(s) > 1):
 				if(s[1][:2] == "en"):
 					self.cyccnt_en()
@@ -68,23 +68,20 @@ class DWT(gdb.Command):
 					self.cyccnt_reset()
 				elif(s[1][0] == "d"):
 					self.cyccnt_dis()
-			gdb.write(prefix + "CYCCNT ({}): ".format("ON" if (self.read(DWT_CTRL) & 1) else "OFF") +
-				self.cycles_str(self.read(DWT_CYCCNT)))
-		elif(s[0] == "reset"):
-			if(len(s) > 1):
-				if(s[1] == "cyccnt"):
-					self.cyccnt_reset()
-					gdb.write(prefix + "CYCCNT reset\n")
-				if(s[1] == "counters"):
-					self.cyccnt_reset()
-					gdb.write(prefix + "CYCCNT reset\n")
-				else:
-					self.cyccnt_reset()
-					gdb.write(prefix + "CYCCNT reset\n")
-			else:
-				# Reset everything
+			gdb.write(
+				(
+					prefix
+					+ f'CYCCNT ({"ON" if self.read(DWT_CTRL) & 1 else "OFF"}): '
+					+ self.cycles_str(self.read(DWT_CYCCNT))
+				)
+			)
+
+		elif s[0] == "reset":
+			if (len(s) > 1) and (s[1] == "cyccnt"):
 				self.cyccnt_reset()
 				gdb.write(prefix + "CYCCNT reset\n")
+			self.cyccnt_reset()
+			gdb.write(prefix + "CYCCNT reset\n")
 		elif(s[0] == "configclk"):
 			if(len(s) == 2):
 				try:
@@ -101,19 +98,19 @@ class DWT(gdb.Command):
 	def complete(self, text, word):
 		text = str(text).lower()
 		s = text.split(" ")
-		
-		commands = ['configclk', 'reset', 'cyccnt']
-		reset_commands = ['counters', 'cyccnt']
-		cyccnt_commands = ['enable', 'reset', 'disable']
-
 
 		if len(s) == 1:
+			commands = ['configclk', 'reset', 'cyccnt']
 			return filter(lambda x:x.startswith(s[0]), commands)
 
 		if len(s) == 2:
 			if s[0] == 'reset':
+				reset_commands = ['counters', 'cyccnt']
 				return filter(lambda x:x.startswith(s[1]), reset_commands)
 			if s[0] == 'cyccnt':
+				cyccnt_commands = ['enable', 'reset', 'disable']
+
+
 				return filter(lambda x:x.startswith(s[1]), cyccnt_commands)
 	def cycles_str(self, cycles):
 		if self.clk:

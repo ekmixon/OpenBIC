@@ -74,7 +74,7 @@ def value_str(sc):
     sc: Symbol or Choice.
     """
     if sc.type in (STRING, INT, HEX):
-        return "({})".format(sc.str_value)
+        return f"({sc.str_value})"
 
     # BOOL or TRISTATE
 
@@ -89,16 +89,16 @@ def value_str(sc):
 
     if len(sc.assignable) == 1:
         # Pinned to a single value
-        return "-{}-".format(tri_val_str)
+        return f"-{tri_val_str}-"
 
     if sc.type == BOOL:
-        return "[{}]".format(tri_val_str)
+        return f"[{tri_val_str}]"
 
     if sc.type == TRISTATE:
         if sc.assignable == (1, 2):
             # m and y available
             return "{" + tri_val_str + "}"  # Gets a bit confusing with .format()
-        return "<{}>".format(tri_val_str)
+        return f"<{tri_val_str}>"
 
 
 def node_str(node):
@@ -125,10 +125,10 @@ def node_str(node):
         return ""
 
     if node.item == MENU:
-        return "    " + prompt
+        return f"    {prompt}"
 
     if node.item == COMMENT:
-        return "    *** {} ***".format(prompt)
+        return f"    *** {prompt} ***"
 
     # Symbol or Choice
 
@@ -149,7 +149,7 @@ def node_str(node):
 
     # Don't print the name for unnamed choices (the normal kind)
     if sc.name is not None:
-        res += " ({})".format(sc.name)
+        res += f" ({sc.name})"
 
     return res
 
@@ -160,8 +160,7 @@ def print_menuconfig_nodes(node, indent):
     entries are indented.
     """
     while node:
-        string = node_str(node)
-        if string:
+        if string := node_str(node):
             indent_print(string, indent)
 
         if node.list:
@@ -176,7 +175,7 @@ def print_menuconfig(kconf):
     """
     # Print the expanded mainmenu text at the top. This is the same as
     # kconf.top_node.prompt[0], but with variable references expanded.
-    print("\n======== {} ========\n".format(kconf.mainmenu_text))
+    print(f"\n======== {kconf.mainmenu_text} ========\n")
 
     print_menuconfig_nodes(kconf.top_node.list, 0)
     print("")
@@ -188,11 +187,7 @@ if __name__ == "__main__":
     kconf = Kconfig(sys.argv[1])
 
     # Set default .config file or load it from argv
-    if len(sys.argv) == 2:
-        config_filename = '.config'
-    else:
-        config_filename = sys.argv[2]
-
+    config_filename = '.config' if len(sys.argv) == 2 else sys.argv[2]
     kconf.load_config(config_filename)
 
     # Print the configuration tree

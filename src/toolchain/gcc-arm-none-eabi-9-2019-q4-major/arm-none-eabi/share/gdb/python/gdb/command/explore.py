@@ -43,24 +43,21 @@ class Explorer(object):
         length = len(expr)
         guard = False
 
-        if expr[0] == '(' and expr[length-1] == ')':
-            pass
-        else:
+        if expr[0] != '(' or expr[length - 1] != ')':
             i = 0
             while i < length:
                 c = expr[i]
-                if (c == '_' or ('a' <= c and c <= 'z') or
-                    ('A' <= c and c <= 'Z') or ('0' <= c and c <= '9')):
-                    pass
-                else:
+                if (
+                    c != '_'
+                    and not 'a' <= c <= 'z'
+                    and not 'A' <= c <= 'Z'
+                    and not '0' <= c <= '9'
+                ):
                     guard = True
                     break
                 i += 1
 
-        if guard:
-            return "(" + expr + ")"
-        else:
-            return expr
+        return f"({expr})" if guard else expr
 
     @staticmethod
     def explore_expr(expr, value, is_child):
@@ -198,7 +195,7 @@ class ScalarExplorer(object):
         """
         print ("'%s' is a scalar value of type '%s'." %
                (expr, value.type))
-        print ("%s = %s" % (expr, str(value)))
+        print(f"{expr} = {str(value)}")
 
         if is_child:
             Explorer.return_to_parent_value_prompt()
@@ -218,12 +215,11 @@ class ScalarExplorer(object):
                        (name, str(datatype)))
             else:
                 print ("'%s' is an enumerated type." % name)
+        elif is_child:
+            print ("%s is of a scalar type '%s'." %
+                   (name, str(datatype)))
         else:
-            if is_child:
-                print ("%s is of a scalar type '%s'." %
-                       (name, str(datatype)))
-            else:
-                print ("'%s' is a scalar type." % name)
+            print ("'%s' is a scalar type." % name)
 
         if is_child:
             Explorer.return_to_enclosing_type_prompt()
@@ -255,10 +251,9 @@ class PointerExplorer(object):
                 if is_child:
                     Explorer.return_to_parent_value_prompt()
                 return False
-            Explorer.explore_expr("*%s" % Explorer.guard_expr(expr),
-                                  deref_value, is_child)
+            Explorer.explore_expr(f"*{Explorer.guard_expr(expr)}", deref_value, is_child)
             return False
-        
+
         option  = raw_input("Continue exploring it as a pointer to an "
                             "array [y/n]: ")
         if option == "y":
@@ -292,9 +287,7 @@ class PointerExplorer(object):
         print ("\n%s is a pointer to a value of type '%s'." %
                (name, str(target_type)))
 
-        Explorer.explore_type("the pointee type of %s" % name,
-                              target_type,
-                              is_child)
+        Explorer.explore_type(f"the pointee type of {name}", target_type, is_child)
         return False
 
 
@@ -359,8 +352,7 @@ class ArrayExplorer(object):
         target_type = datatype.target()
         print ("%s is an array of '%s'." % (name, str(target_type)))
 
-        Explorer.explore_type("the array element of %s" % name, target_type,
-                              is_child)
+        Explorer.explore_type(f"the array element of {name}", target_type, is_child)
         return False
 
 
@@ -373,9 +365,7 @@ class CompoundExplorer(object):
         """
         max_field_name_length = 0
         for pair in print_list:
-            if max_field_name_length < len(pair[0]):
-                max_field_name_length = len(pair[0])
-
+            max_field_name_length = max(max_field_name_length, len(pair[0]))
         for pair in print_list:
             print ("  %*s = %s" % (max_field_name_length, pair[0], pair[1]))
 
@@ -397,11 +387,7 @@ class CompoundExplorer(object):
         type_code = datatype.code
         fields = datatype.fields()
 
-        if type_code == gdb.TYPE_CODE_STRUCT:
-            type_desc = "struct/class"
-        else:
-            type_desc = "union"
-
+        type_desc = "struct/class" if type_code == gdb.TYPE_CODE_STRUCT else "union"
         if CompoundExplorer._get_real_field_count(fields) == 0:
             print ("The value of '%s' is a %s of type '%s' with no fields." %
                    (expr, type_desc, str(value.type)))
@@ -419,7 +405,7 @@ class CompoundExplorer(object):
         for field in fields:
             if field.artificial:
                 continue
-            field_full_name = Explorer.guard_expr(expr) + "." + field.name
+            field_full_name = f"{Explorer.guard_expr(expr)}.{field.name}"
             if field.is_base_class:
                 field_value = value.cast(field.type)
             else:
@@ -429,20 +415,16 @@ class CompoundExplorer(object):
                 literal_value = ("<Enter %d to explore this field of type "
                                  "'%s'>" % (current_choice, str(field.type)))
                 has_explorable_fields = True
+            elif Explorer.is_scalar_type(field.type):
+                literal_value = ("%s .. (Value of type '%s')" %
+                                 (str(field_value), str(field.type)))
             else:
-                if Explorer.is_scalar_type(field.type):
-                    literal_value = ("%s .. (Value of type '%s')" %
-                                     (str(field_value), str(field.type)))
-                else:
-                    if field.is_base_class:
-                        field_desc = "base class"
-                    else:
-                        field_desc = "field"
-                    literal_value = ("<Enter %d to explore this %s of type "
-                                     "'%s'>" %
-                                     (current_choice, field_desc,
-                                      str(field.type)))
-                    has_explorable_fields = True
+                field_desc = "base class" if field.is_base_class else "field"
+                literal_value = ("<Enter %d to explore this %s of type "
+                                 "'%s'>" %
+                                 (current_choice, field_desc,
+                                  str(field.type)))
+                has_explorable_fields = True
 
             choice_to_compound_field_map[str(current_choice)] = (
                 field_full_name, field_value)
@@ -463,9 +445,8 @@ class CompoundExplorer(object):
             else:
                 if is_child:
                     Explorer.return_to_parent_value()
-        else:
-            if is_child:
-                Explorer.return_to_parent_value_prompt()
+        elif is_child:
+            Explorer.return_to_parent_value_prompt()
 
         return False
 
@@ -476,11 +457,7 @@ class CompoundExplorer(object):
         """
         type_code = datatype.code
         type_desc = ""
-        if type_code == gdb.TYPE_CODE_STRUCT:
-            type_desc = "struct/class"
-        else:
-            type_desc = "union"
-
+        type_desc = "struct/class" if type_code == gdb.TYPE_CODE_STRUCT else "union"
         fields = datatype.fields()
         if CompoundExplorer._get_real_field_count(fields) == 0:
             if is_child:
@@ -507,10 +484,7 @@ class CompoundExplorer(object):
         for field in fields:
             if field.artificial:
                 continue
-            if field.is_base_class:
-                field_desc = "base class"
-            else:
-                field_desc = "field"
+            field_desc = "base class" if field.is_base_class else "field"
             rhs = ("<Enter %d to explore this %s of type '%s'>" %
                    (current_choice, field_desc, str(field.type)))
             print_list.append((field.name, rhs))
@@ -521,28 +495,37 @@ class CompoundExplorer(object):
         CompoundExplorer._print_fields(print_list)
         print ("")
 
-        if len(choice_to_compound_field_map) > 0:
+        if choice_to_compound_field_map:
             choice = raw_input("Enter the field number of choice: ")
             if choice in choice_to_compound_field_map:
-                if is_child:
-                    new_name = ("%s '%s' of %s" % 
-                                (choice_to_compound_field_map[choice][2],
-                                 choice_to_compound_field_map[choice][0],
-                                 name))
-                else:
-                    new_name = ("%s '%s' of '%s'" % 
-                                (choice_to_compound_field_map[choice][2],
-                                 choice_to_compound_field_map[choice][0],
-                                 name))
+                new_name = (
+                    (
+                        "%s '%s' of %s"
+                        % (
+                            choice_to_compound_field_map[choice][2],
+                            choice_to_compound_field_map[choice][0],
+                            name,
+                        )
+                    )
+                    if is_child
+                    else (
+                        "%s '%s' of '%s'"
+                        % (
+                            choice_to_compound_field_map[choice][2],
+                            choice_to_compound_field_map[choice][0],
+                            name,
+                        )
+                    )
+                )
+
                 Explorer.explore_type(new_name,
                     choice_to_compound_field_map[choice][1], True)
                 return True
             else:
                 if is_child:
                     Explorer.return_to_enclosing_type()
-        else:
-            if is_child:
-                Explorer.return_to_enclosing_type_prompt()
+        elif is_child:
+            Explorer.return_to_enclosing_type_prompt()
 
         return False
            
@@ -601,7 +584,6 @@ class ExploreUtils(object):
         if len(arg_str) < 1:
             raise gdb.GdbError("ERROR: '%s' requires an argument."
                                % name)
-            return False
         else:
             return True
 
@@ -619,7 +601,7 @@ class ExploreUtils(object):
         """
         try:
             # Assume the current language to be C/C++ and make a try.
-            return gdb.parse_and_eval("(%s *)0" % type_str).type.target()
+            return gdb.parse_and_eval(f"({type_str} *)0").type.target()
         except RuntimeError:
             # If assumption of current language to be C/C++ was wrong, then
             # lookup the type using the API.
@@ -706,8 +688,6 @@ choice, if any) to return to the enclosing value."""
                 (" '%s' does not evaluate to a value in the current "
                  "context." %
                  arg_str))
-            return
-
         Explorer.explore_expr(arg_str, value, False)
 
 

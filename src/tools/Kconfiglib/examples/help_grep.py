@@ -53,12 +53,12 @@ for node in Kconfig(sys.argv[1]).node_iter():
         match = True
 
     elif node.item == MENU and search(node.prompt[0]):
-        print('menu "{}"'.format(node.prompt[0]))
+        print(f'menu "{node.prompt[0]}"')
         match = True
 
     elif node.item == COMMENT and search(node.prompt[0]):
-        print('comment "{}"'.format(node.prompt[0]))
+        print(f'comment "{node.prompt[0]}"')
         match = True
 
     if match:
-        print("location: {}:{}\n".format(node.filename, node.linenr))
+        print(f"location: {node.filename}:{node.linenr}\n")

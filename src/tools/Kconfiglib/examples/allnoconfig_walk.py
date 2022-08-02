@@ -50,13 +50,13 @@ for sym in kconf.unique_defined_syms:
     if sym.is_allnoconfig_y:
         sym.set_value(2)
 
-while True:
-    # Changing later symbols in the configuration can sometimes allow earlier
-    # symbols to be lowered, e.g. if a later symbol 'select's an earlier
-    # symbol. To handle such situations, we do additional passes over the tree
-    # until we're no longer able to change the value of any symbol in a pass.
-    changed = False
+# Changing later symbols in the configuration can sometimes allow earlier
+# symbols to be lowered, e.g. if a later symbol 'select's an earlier
+# symbol. To handle such situations, we do additional passes over the tree
+# until we're no longer able to change the value of any symbol in a pass.
+changed = False
 
+while True:
     do_allnoconfig(kconf.top_node)
 
     # Did the pass change any symbols?

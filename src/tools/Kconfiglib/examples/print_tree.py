@@ -53,16 +53,16 @@ def indent_print(s, indent):
 def print_items(node, indent):
     while node:
         if isinstance(node.item, Symbol):
-            indent_print("config " + node.item.name, indent)
+            indent_print(f"config {node.item.name}", indent)
 
         elif isinstance(node.item, Choice):
             indent_print("choice", indent)
 
         elif node.item == MENU:
-            indent_print('menu "{}"'.format(node.prompt[0]), indent)
+            indent_print(f'menu "{node.prompt[0]}"', indent)
 
         elif node.item == COMMENT:
-            indent_print('comment "{}"'.format(node.prompt[0]), indent)
+            indent_print(f'comment "{node.prompt[0]}"', indent)
 
 
         if node.list:

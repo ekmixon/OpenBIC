@@ -66,21 +66,17 @@ class FrameDecorator(object):
         limited."""
         sal = frame.find_sal()
 
-        if (not sal.symtab or not sal.symtab.filename
+        return (
+            not sal.symtab
+            or not sal.symtab.filename
             or frame.type() == gdb.DUMMY_FRAME
-            or frame.type() == gdb.SIGTRAMP_FRAME):
-
-            return True
-
-        return False
+            or frame.type() == gdb.SIGTRAMP_FRAME
+        )
 
     def elided(self):
         """Return any elided frames that this class might be
         wrapping, or None."""
-        if hasattr(self._base, "elided"):
-            return self._base.elided()
-
-        return None
+        return self._base.elided() if hasattr(self._base, "elided") else None
 
     def function(self):
         """ Return the name of the frame's function or an address of
@@ -94,11 +90,12 @@ class FrameDecorator(object):
 
         # Both gdb.Frame, and FrameDecorator have a method called
         # "function", so determine which object this is.
-        if not isinstance(self._base, gdb.Frame):
-            if hasattr(self._base, "function"):
-                # If it is not a gdb.Frame, and there is already a
-                # "function" method, use that.
-                return self._base.function()
+        if not isinstance(self._base, gdb.Frame) and hasattr(
+            self._base, "function"
+        ):
+            # If it is not a gdb.Frame, and there is already a
+            # "function" method, use that.
+            return self._base.function()
 
         frame = self.inferior_frame()
 
@@ -113,7 +110,7 @@ class FrameDecorator(object):
         # address.  If GDB detects an integer value from this function
         # it will attempt to find the function name from minimal
         # symbols via its own internal functions.
-        if func == None:
+        if func is None:
             pc = frame.pc()
             return pc
 
@@ -138,11 +135,10 @@ class FrameDecorator(object):
 
         frame = self.inferior_frame()
         sal = frame.find_sal()
-        if not sal.symtab or not sal.symtab.filename:
-            pc = frame.pc()
-            return gdb.solib_name(pc)
-        else:
+        if sal.symtab and sal.symtab.filename:
             return sal.symtab.filename
+        pc = frame.pc()
+        return gdb.solib_name(pc)
 
     def frame_args(self):
         """ Return an iterable of frame arguments for this frame, if
@@ -188,11 +184,7 @@ class FrameDecorator(object):
         if self._is_limited_frame(frame):
             return None
 
-        sal = frame.find_sal()
-        if (sal):
-            return sal.line
-        else:
-            return None
+        return sal.line if (sal := frame.find_sal()) else None
 
     def inferior_frame(self):
         """ Return the gdb.Frame underpinning this frame decorator."""
@@ -263,9 +255,7 @@ class FrameVars(object):
         except RuntimeError:
             block = None
 
-        while block != None:
-            if block.is_global or block.is_static:
-                break
+        while block != None and not (block.is_global or block.is_static):
             for sym in block:
                 if sym.is_argument:
                     continue;
@@ -288,15 +278,9 @@ class FrameVars(object):
         except RuntimeError:
             block = None
 
-        while block != None:
-            if block.function != None:
-                break
+        while block != None and block.function is None:
             block = block.superblock
 
         if block != None:
-            for sym in block:
-                if not sym.is_argument:
-                    continue;
-                args.append(SymValueWrapper(sym, None))
-
+            args.extend(SymValueWrapper(sym, None) for sym in block if sym.is_argument)
         return args

@@ -56,8 +56,7 @@ def main():
             # to show n-valued symbols as 'CONFIG_FOO=n' instead of
             # '# CONFIG_FOO is not set'. This matches the C tools.
             if sym.orig_type in (BOOL, TRISTATE):
-                s = "{}{}={}\n".format(kconf.config_prefix, sym.name,
-                                       TRI_TO_STR[sym.tri_value])
+                s = f"{kconf.config_prefix}{sym.name}={TRI_TO_STR[sym.tri_value]}\n"
             else:
                 s = sym.config_string
 
@@ -67,8 +66,7 @@ def main():
                     if node.help is not None:
                         # Indent by two spaces. textwrap.indent() is not
                         # available in Python 2 (it's 3.3+).
-                        print("\n".join("  " + line
-                                        for line in node.help.split("\n")))
+                        print("\n".join(f"  {line}" for line in node.help.split("\n")))
                         break
 
 

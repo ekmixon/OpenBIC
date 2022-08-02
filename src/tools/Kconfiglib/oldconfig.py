@@ -47,9 +47,9 @@ def _main():
     kconf = standard_kconfig(__doc__)
     print(kconf.load_config())
 
-    while True:
-        conf_changed = False
+    conf_changed = False
 
+    while True:
         for node in kconf.node_iter():
             oldconfig(node)
 
@@ -98,9 +98,10 @@ def oldconfig(node):
         # Loop until the user enters a valid value or enters a blank string
         # (for the default value)
         while True:
-            val = input("{} ({}) [{}] ".format(
-                node.prompt[0], _name_and_loc_str(sym),
-                _default_value_str(sym)))
+            val = input(
+                f"{node.prompt[0]} ({_name_and_loc_str(sym)}) [{_default_value_str(sym)}] "
+            )
+
 
             if val == "?":
                 _print_help(node)
@@ -115,7 +116,7 @@ def oldconfig(node):
             # menuconfig interface does. This isn't done when loading .config
             # files, hence why set_value() doesn't do it automatically.
             if sym.type == HEX and not val.startswith(("0x", "0X")):
-                val = "0x" + val
+                val = f"0x{val}"
 
             old_str_val = sym.str_value
 
@@ -159,18 +160,15 @@ def oldconfig(node):
         # Loop until the user enters a valid selection or a blank string (for
         # the default selection)
         while True:
-            print("{} ({})".format(node.prompt[0], _name_and_loc_str(choice)))
+            print(f"{node.prompt[0]} ({_name_and_loc_str(choice)})")
 
             for i, sym in enumerate(options, 1):
-                print("{} {}. {} ({})".format(
-                    ">" if sym is choice.selection else " ",
-                    i,
-                    # Assume people don't define choice symbols with multiple
-                    # prompts. That generates a warning anyway.
-                    sym.nodes[0].prompt[0],
-                    sym.name))
+                print(
+                    f'{">" if sym is choice.selection else " "} {i}. {sym.nodes[0].prompt[0]} ({sym.name})'
+                )
 
-            sel_index = input("choice[1-{}]: ".format(len(options)))
+
+            sel_index = input(f"choice[1-{len(options)}]: ")
 
             if sel_index == "?":
                 _print_help(node)
@@ -219,8 +217,8 @@ def _name_and_loc_str(sc):
 
     return "{}, defined at {}".format(
         sc.name or "choice",
-        ", ".join("{}:{}".format(node.filename, node.linenr)
-                  for node in sc.nodes))
+        ", ".join(f"{node.filename}:{node.linenr}" for node in sc.nodes),
+    )
 
 
 def _print_help(node):

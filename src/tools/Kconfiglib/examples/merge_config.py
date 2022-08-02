@@ -115,7 +115,7 @@ for sym in kconf.defined_syms:
             user_value = sym.user_value
 
         if user_value != sym.str_value:
-            print("warning: {} was assigned the value '{}' but got the "
-                  "value '{}' -- check dependencies".format(
-                      sym.name_and_loc, user_value, sym.str_value),
-                  file=sys.stderr)
+            print(
+                f"warning: {sym.name_and_loc} was assigned the value '{user_value}' but got the value '{sym.str_value}' -- check dependencies",
+                file=sys.stderr,
+            )
